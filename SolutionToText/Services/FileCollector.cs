@@ -14,9 +14,9 @@ class FileCollector
 	private HashSet<string> _includeExtensions = [".cs"];
 
 	/// <summary>
-	/// Стек списков шаблонов исключения для каждой директории, на основе файлов .gitignore.
+	/// Стек списков предкомпилированных регулярных выражений для исключения файлов и директорий.
 	/// </summary>
-	private Stack<List<string>> _excludePatternsStack = new();
+	private Stack<List<Regex>> _excludePatternsStack = new();
 
 	/// <summary>
 	/// Собирает файлы с расширениями из <see cref="_includeExtensions"/>, 
@@ -28,7 +28,12 @@ class FileCollector
 	internal List<string> Collect(string rootPath)
 	{
 		var files = new List<string>();
-		_excludePatternsStack.Push(["obj/"]); // Начинаем без папки obj
+		// Предварительное исключение папки "obj"
+		var initialPatterns = new List<Regex>
+		{
+			new Regex(@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase)
+		};
+		_excludePatternsStack.Push(initialPatterns);
 		CollectFilesRecursive(rootPath, files);
 		_excludePatternsStack.Clear(); // Очищаем стек после обхода
 		return files;
@@ -92,9 +97,9 @@ class FileCollector
 	{
 		foreach (var patterns in _excludePatternsStack)
 		{
-			foreach (var pattern in patterns)
+			foreach (var regex in patterns)
 			{
-				if (PatternMatches(name, pattern, isDirectory))
+				if (regex.IsMatch(name))
 					return true;
 			}
 		}
@@ -103,44 +108,13 @@ class FileCollector
 	}
 
 	/// <summary>
-	/// Проверяет, соответствует ли имя файла или директории шаблону,
-	/// с учётом того, является ли объект директорией.
-	/// </summary>
-	/// <param name="name">Название файла или директории.</param>
-	/// <param name="pattern">Шаблон для проверки.</param>
-	/// <param name="isDirectory">Указывает, является ли объект директорией.</param>
-	/// <returns>True, если файл или директория соответствует шаблону, иначе False.</returns>
-	private bool PatternMatches(string name, string pattern, bool isDirectory)
-	{
-		// Упрощенная обработка паттернов из .gitignore
-		// Для полной поддержки стоит использовать библиотеку
-		// Но для простоты заменим '*' на '.*' и '?' на '.'
-
-		// Обработка паттернов директорий
-		if (pattern.EndsWith("/"))
-		{
-			if (!isDirectory)
-				return false;
-
-			pattern = pattern.TrimEnd('/');
-		}
-
-		// Конвертируем паттерн в регулярное выражение
-		string regexPattern = "^" + Regex.Escape(pattern)
-								.Replace("\\*", ".*")
-								.Replace("\\?", ".") + "$";
-
-		return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
-	}
-
-	/// <summary>
-	/// Читает файл .gitignore и возвращает список шаблонов исключений.
+	/// Читает файл .gitignore и возвращает список предкомпилированных регулярных выражений.
 	/// </summary>
 	/// <param name="gitignorePath">Путь к файлу .gitignore.</param>
-	/// <returns>Список шаблонов для игнорирования.</returns>
-	private List<string> ParseGitignoreFile(string gitignorePath)
+	/// <returns>Список регулярных выражений для игнорирования.</returns>
+	private List<Regex> ParseGitignoreFile(string gitignorePath)
 	{
-		var patterns = new List<string>();
+		var patterns = new List<Regex>();
 		var lines = File.ReadAllLines(gitignorePath);
 
 		foreach (var line in lines)
@@ -158,7 +132,25 @@ class FileCollector
 			if (trimmedLine.StartsWith("!"))
 				continue;
 
-			patterns.Add(trimmedLine);
+			// Обработка паттернов директорий
+			bool isDirectoryPattern = trimmedLine.EndsWith("/");
+
+			string pattern = trimmedLine.TrimEnd('/');
+
+			// Конвертируем паттерн в регулярное выражение
+			string regexPattern = "^" + Regex.Escape(pattern)
+										.Replace("\\*", ".*")
+										.Replace("\\?", ".") + "$";
+
+			var options = RegexOptions.Compiled | RegexOptions.IgnoreCase;
+
+			// Если это паттерн для директории, добавляем проверку на конец строки
+			if (isDirectoryPattern)
+			{
+				regexPattern += @"(\\|/)?$";
+			}
+
+			patterns.Add(new Regex(regexPattern, options));
 		}
 
 		return patterns;
