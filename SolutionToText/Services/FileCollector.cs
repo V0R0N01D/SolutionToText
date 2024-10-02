@@ -3,13 +3,20 @@
 namespace SolutionToText.Services;
 
 /// <summary>
-/// Класс для получения всех файлов рекурсивно с поддержкой .gitignore
+/// Класс для рекурсивного поиска файлов в директориях с поддержкой фильтрации на основе файла .gitignore.
 /// </summary>
-internal class FileCollector
+class FileCollector
 {
 	private HashSet<string> _includeExtensions = [".cs"];
 	private Stack<List<string>> _excludePatternsStack = new();
 
+	/// <summary>
+	/// Собирает файлы, соответствующие включенным расширениям, 
+	/// начиная с указанной директории и всех её подпапок, 
+	/// с применением фильтрации на основе шаблонов исключений (.gitignore).
+	/// </summary>
+	/// <param name="rootPath"></param>
+	/// <returns></returns>
 	internal List<string> Collect(string rootPath)
 	{
 		var files = new List<string>();
@@ -19,6 +26,12 @@ internal class FileCollector
 		return files;
 	}
 
+	/// <summary>
+	/// Рекурсивно собирает файлы из текущей директории и её подпапок, 
+	/// применяя шаблоны исключений для фильтрации.
+	/// </summary>
+	/// <param name="currentPath">Текущий путь.</param>
+	/// <param name="files">Список файлов.</param>
 	private void CollectFilesRecursive(string currentPath, List<string> files)
 	{
 		// Проверяем наличие .gitignore в текущей директории
@@ -30,11 +43,10 @@ internal class FileCollector
 		}
 		else
 		{
-			// Если .gitignore нет, добавляем пустой список
 			_excludePatternsStack.Push(new());
 		}
 
-		// Обрабатываем поддиректории
+		// Обработка поддиректорий
 		foreach (var dir in Directory.GetDirectories(currentPath))
 		{
 			string dirName = Path.GetFileName(dir);
@@ -60,7 +72,13 @@ internal class FileCollector
 		_excludePatternsStack.Pop();
 	}
 
-
+	/// <summary>
+	/// Определяет, должен ли файл или директория быть исключены 
+	/// на основе текущего стека шаблонов исключений.
+	/// </summary>
+	/// <param name="name">Название файла (с расширением) или директории.</param>
+	/// <param name="isDirectory">Является ли параметр name директорией.</param>
+	/// <returns>Результат проверки на исключения (true - файл исключается, false - файл остается).</returns>
 	private bool IsExcluded(string name, bool isDirectory)
 	{
 		foreach (var patterns in _excludePatternsStack)
@@ -75,7 +93,14 @@ internal class FileCollector
 		return false;
 	}
 
-
+	/// <summary>
+	/// Проверяет, соответствует ли имя файла или директории шаблону, 
+	/// с учётом того, является ли объект директорией.
+	/// </summary>
+	/// <param name="name">Название файла (с расширением) или директории.</param>
+	/// <param name="pattern">Шаблон.</param>
+	/// <param name="isDirectory">Является ли параметр name директорией.</param>
+	/// <returns>Подходит ли файл или директория под паттерн.</returns>
 	private bool PatternMatches(string name, string pattern, bool isDirectory)
 	{
 		// Упрощенная обработка паттернов из .gitignore
@@ -100,10 +125,10 @@ internal class FileCollector
 	}
 
 	/// <summary>
-	/// Чтение файла .gitignore
+	/// Читает файл .gitignore и возвращает список шаблонов исключений.
 	/// </summary>
-	/// <param name="gitignorePath">Путь до файла</param>
-	/// <returns>Список паттернов для игнорирования</returns>
+	/// <param name="gitignorePath">Путь до файла.</param>
+	/// <returns>Список паттернов для игнорирования.</returns>
 	private List<string> ParseGitignoreFile(string gitignorePath)
 	{
 		var patterns = new List<string>();

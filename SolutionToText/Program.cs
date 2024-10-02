@@ -2,29 +2,25 @@
 
 namespace SolutionToText;
 
-internal class Program
+class Program
 {
 	static void Main(string[] args)
 	{
 		try
 		{
 			Console.WriteLine("Введите путь к папке с решением:");
-			var solutionPath = Console.ReadLine();
+			var rootPath = Console.ReadLine();
 
-			if (!Directory.Exists(solutionPath))
+			if (!Directory.Exists(rootPath))
 			{
 				Console.WriteLine("Указанная папка не существует.");
 				return;
 			}
 
 			var processor = new SolutionProcessor();
-			processor.Process(solutionPath);
+			var destinationFilePath = processor.Process(rootPath);
 
-			
-
-			Console.WriteLine("Обработка завершена. Объединенный файл создан.");
-
-			
+			Console.WriteLine($"Обработка завершена. Объединенный файл создан: {destinationFilePath}.");
 		}
 		catch (Exception ex)
 		{
