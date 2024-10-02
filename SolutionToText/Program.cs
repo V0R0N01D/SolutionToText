@@ -17,8 +17,7 @@ class Program
 				return;
 			}
 
-			var processor = new SolutionProcessor();
-			var destinationFilePath = processor.Process(rootPath);
+			var destinationFilePath = SolutionProcessor.Process(rootPath);
 
 			Console.WriteLine($"Обработка завершена. Объединенный файл создан: {destinationFilePath}.");
 		}
