@@ -25,5 +25,7 @@ class Program
 		{
 			Console.WriteLine($"Произошла ошибка: {ex.Message}");
 		}
+
+		Console.ReadLine();
 	}
 }

@@ -11,7 +11,7 @@ class FileCollector
 	/// <summary>
 	/// Набор расширений файлов, которые необходимо включить в поиск.
 	/// </summary>
-	private HashSet<string> _includeExtensions = [".cs"];
+	private HashSet<string> _includeExtensions = [".cs", ".sln", ".csproj"];
 
 	/// <summary>
 	/// Стек списков предкомпилированных регулярных выражений для исключения файлов и директорий.
