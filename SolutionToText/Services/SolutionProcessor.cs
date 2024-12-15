@@ -14,7 +14,7 @@ class SolutionProcessor
 	/// </summary>
 	/// <param name="rootPath">Путь к корневой директории решения.</param>
 	/// <returns>Путь к созданному объединенному файлу.</returns>
-	internal static string Process(string rootPath)
+	internal static string Process(DirectoryInfo rootPath)
 	{
 		var collector = new FileCollector();
 		var filesPath = collector.Collect(rootPath);
@@ -32,7 +32,7 @@ class SolutionProcessor
 		{
 			foreach (var file in filesPath)
 			{
-				writer.WriteLine($"Содержимое файла {file.Replace(rootPath, string.Empty)}:");
+				writer.WriteLine($"Содержимое файла {file.Replace(rootPath.FullName, string.Empty)}:");
 				buffer.CopyFileContent(file, writer);
 
 				writer.WriteLine("\n");

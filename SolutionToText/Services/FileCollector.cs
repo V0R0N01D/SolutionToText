@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 using SolutionToText.Models;
 
 namespace SolutionToText.Services;
@@ -26,7 +27,7 @@ class FileCollector
     /// </summary>
     /// <param name="rootPath">Путь к корневой директории, с которой начинается сбор файлов.</param>
     /// <returns>Список путей к найденным файлам.</returns>
-    internal List<string> Collect(string rootPath)
+    internal List<string> Collect(DirectoryInfo rootPath)
     {
         var files = new List<string>();
         // Предварительное исключение папки "obj"
@@ -34,8 +35,11 @@ class FileCollector
         {
             new Regex(@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase)
         };
+
+        var filesMap = new StringBuilder();
+
         _excludePatternsStack.Push(initialPatterns);
-        CollectFilesRecursive(rootPath, files);
+        CollectFilesRecursive(rootPath, filesMap, files);
         _excludePatternsStack.Clear();
         return files;
     }
@@ -47,7 +51,7 @@ class FileCollector
     /// </summary>
     /// <param name="currentDirectory">Текущая директория.</param>
     /// <param name="files">Список для накопления найденных файлов.</param>
-    private void CollectFilesRecursive(DirectoryInfo currentDirectory, List<string> files)
+    private void CollectFilesRecursive(DirectoryInfo currentDirectory, StringBuilder filesMap, List<string> files)
     {
         // Проверяем наличие .gitignore в текущей директории
         var gitIngnoreFile = currentDirectory.GetFiles(".gitignore").FirstOrDefault();
@@ -68,17 +72,15 @@ class FileCollector
             if (IsExcluded(dir.Name, true))
                 continue;
 
-            CollectFilesRecursive(dir, files);
+            CollectFilesRecursive(dir, filesMap, files);
         }
 
         // Обработка файлов в текущей директории
         foreach (var file in currentDirectory.GetFiles())
         {
-            string fileName = Path.GetFileName(file);
-
             // Фильтрация по расширению и исключениям
-            if (_includeExtensions.Contains(file.Extension) && !IsExcluded(fileName, false))
-                files.Add(file);
+            if (_includeExtensions.Contains(file.Extension) && !IsExcluded(file.Name, false))
+                files.Add(file.FullName);
         }
 
         // Удаляем паттерны текущей директории из стека
