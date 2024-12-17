@@ -5,44 +5,51 @@ namespace SolutionToText.Services;
 /// <summary>
 /// Класс для обработки файлов решения, объединяющий их содержимое в один файл на рабочем столе.
 /// </summary>
-class SolutionProcessor
+internal class SolutionProcessor
 {
-	/// <summary>
-	/// Обрабатывает все файлы с нужными расширениями в указанной директории и её подпапках,
-	/// применяет фильтрацию на основе .gitignore и объединяет их содержимое 
-	/// в один текстовый файл 'result.txt' на рабочем столе пользователя.
-	/// </summary>
-	/// <param name="rootPath">Путь к корневой директории решения.</param>
-	/// <returns>Путь к созданному объединенному файлу.</returns>
-	internal static string Process(DirectoryInfo rootPath)
-	{
-		var collector = new FileCollector();
-		var filesPath = collector.Collect(rootPath);
+    /// <summary>
+    /// Обрабатывает все файлы с нужными расширениями в указанной директории и её подпапках,
+    /// применяет фильтрацию на основе .gitignore и объединяет их содержимое 
+    /// в один текстовый файл 'result.txt' на рабочем столе пользователя.
+    /// </summary>
+    /// <param name="rootPath">Путь к корневой директории решения.</param>
+    /// <returns>Путь к созданному объединенному файлу.</returns>
+    internal static string Process(DirectoryInfo rootPath)
+    {
+        var filesMap = new FilesMapCollector();
+        var filesCollector = new FileCollector();
 
-		var destinationFilePath = 
-			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "result.txt");
+        var directoryTraverser = new DirectoryTraverser(filesMap, filesCollector);
+        directoryTraverser.TraverseDirectory(rootPath);
 
-		using var destinationStream = 
-			new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write);
-		using var writer = new StreamWriter(destinationStream);
+        var destinationFilePath =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            "result.txt");
 
-		var buffer = ArrayPool<char>.Shared.Rent(2048);
+        using var destinationStream =
+            new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write);
+        using var writer = new StreamWriter(destinationStream);
 
-		try
-		{
-			foreach (var file in filesPath)
-			{
-				writer.WriteLine($"Содержимое файла {file.Replace(rootPath.FullName, string.Empty)}:");
-				buffer.CopyFileContent(file, writer);
+        var buffer = ArrayPool<char>.Shared.Rent(2048);
 
-				writer.WriteLine("\n");
-			}
-		}
-		finally
-		{
-			ArrayPool<char>.Shared.Return(buffer);
-		}
+        try
+        {
+            writer.WriteLine(filesMap.GetFilesMap());
 
-		return destinationFilePath;
-	}
+            foreach (var file in filesCollector.GetFiles())
+            {
+                writer.WriteLine($"Содержимое файла {file
+                    .FullName.Replace(rootPath.FullName, string.Empty)}:");
+                buffer.CopyFileContent(file, writer);
+
+                writer.WriteLine("\n");
+            }
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(buffer);
+        }
+
+        return destinationFilePath;
+    }
 }

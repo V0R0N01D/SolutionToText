@@ -11,4 +11,8 @@
     <PackageReference Include="YandexTickets.ApiClients.Crm" Version="1.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+
 </Project>

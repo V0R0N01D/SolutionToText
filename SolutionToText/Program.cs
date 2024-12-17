@@ -11,13 +11,21 @@ class Program
 			Console.WriteLine("Введите путь к папке с решением:");
 			var rootPath = Console.ReadLine();
 
-			if (!Directory.Exists(rootPath))
+			if (string.IsNullOrWhiteSpace(rootPath))
+			{
+                Console.WriteLine("Передано пустое поле.");
+                return;
+            }
+
+			var directoryInfo = new DirectoryInfo(rootPath);
+
+			if (!directoryInfo.Exists)
 			{
 				Console.WriteLine("Указанная папка не существует.");
 				return;
 			}
 
-			var destinationFilePath = SolutionProcessor.Process(rootPath);
+			var destinationFilePath = SolutionProcessor.Process(directoryInfo);
 
 			Console.WriteLine($"Обработка завершена. Объединенный файл создан: {destinationFilePath}.");
 		}
