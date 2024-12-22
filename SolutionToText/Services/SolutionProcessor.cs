@@ -5,7 +5,7 @@ namespace SolutionToText.Services;
 /// <summary>
 /// Класс для обработки файлов решения, объединяющий их содержимое в один файл на рабочем столе.
 /// </summary>
-internal class SolutionProcessor
+class SolutionProcessor
 {
     /// <summary>
     /// Обрабатывает все файлы с нужными расширениями в указанной директории и её подпапках,
@@ -14,40 +14,27 @@ internal class SolutionProcessor
     /// </summary>
     /// <param name="rootPath">Путь к корневой директории решения.</param>
     /// <returns>Путь к созданному объединенному файлу.</returns>
-    internal static string Process(DirectoryInfo rootPath)
+    internal string Process(DirectoryInfo rootPath)
     {
-        var filesMap = new FilesMapCollector();
-        var filesCollector = new FileCollector();
+        var filesStruct = new FileStructureCollector();
+        var filesCollector = new SourceFileCollector([".cs", ".js", ".css"]);
 
-        var directoryTraverser = new DirectoryTraverser(filesMap, filesCollector);
-        directoryTraverser.TraverseDirectory(rootPath);
+        var directoryTraverser = new DirectoryWalker(filesStruct, filesCollector);
+        directoryTraverser.WalkDirectory(rootPath);
 
-        var destinationFilePath =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+        var destinationFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
             "result.txt");
 
-        using var destinationStream =
-            new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write);
-        using var writer = new StreamWriter(destinationStream);
+        using var fileWriter = new ContentWriter(destinationFilePath);
 
-        var buffer = ArrayPool<char>.Shared.Rent(2048);
+        var buffer = new char[2048];
 
-        try
+        fileWriter.WriteFilesStructure(filesStruct);
+
+        foreach (var file in filesCollector.GetSourceFiles())
         {
-            writer.WriteLine(filesMap.GetFilesMap());
-
-            foreach (var file in filesCollector.GetFiles())
-            {
-                writer.WriteLine($"Содержимое файла {file
-                    .FullName.Replace(rootPath.FullName, string.Empty)}:");
-                buffer.CopyFileContent(file, writer);
-
-                writer.WriteLine("\n");
-            }
-        }
-        finally
-        {
-            ArrayPool<char>.Shared.Return(buffer);
+            fileWriter.WriteFileContent(file, buffer, rootPath.FullName);
         }
 
         return destinationFilePath;

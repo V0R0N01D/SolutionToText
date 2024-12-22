@@ -1,0 +1,24 @@
+﻿using System.Text;
+using SolutionToText.Interfaces;
+
+namespace SolutionToText.Services;
+
+/// <summary>
+/// Класс который используется, чтобы создать карту файлов в проекте.
+/// </summary>
+class FileStructureCollector : IFileStructureCollector
+{
+    private readonly StringBuilder _filesStructure = new();
+
+    public void AddFile(FileInfo file, string currentTab)
+    {
+        _filesStructure.AppendLine($"{currentTab} {file.Name}");
+    }
+
+    public void AddDirectory(DirectoryInfo directory, string currentTab)
+    {
+        _filesStructure.AppendLine($"{currentTab} {directory.Name}");
+    }
+
+    public string GetFilesStructure() => _filesStructure.ToString();
+}

@@ -18,17 +18,23 @@ class Program
             }
 
 			var directoryInfo = new DirectoryInfo(rootPath);
-
 			if (!directoryInfo.Exists)
 			{
 				Console.WriteLine("Указанная папка не существует.");
 				return;
 			}
 
-			var destinationFilePath = SolutionProcessor.Process(directoryInfo);
+			var solutionProcessor = new SolutionProcessor();
+			var destinationFilePath = solutionProcessor.Process(directoryInfo);
 
 			Console.WriteLine($"Обработка завершена. Объединенный файл создан: {destinationFilePath}.");
-		}
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = destinationFilePath,
+                UseShellExecute = true
+            });
+        }
 		catch (Exception ex)
 		{
 			Console.WriteLine($"Произошла ошибка: {ex.Message}");

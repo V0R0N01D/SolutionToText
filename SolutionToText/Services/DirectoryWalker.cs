@@ -1,30 +1,31 @@
 ﻿using System.Text.RegularExpressions;
+using SolutionToText.Interfaces;
 
 namespace SolutionToText.Services;
 
 /// <summary>
 /// Класс который рекурсивно проходится по директориям и передает данные в другие классы.
 /// </summary>
-internal class DirectoryTraverser
+class DirectoryWalker : IDirectoryWalker
 {
-    private const char TabSimbol = '-';
+    private const char TabSymbol = '-';
 
-    private readonly FilesMapCollector _fileMapCollector;
-    private readonly FileCollector _fileCollector;
+    private readonly IFileStructureCollector _fileMapCollector;
+    private readonly ISourceFileCollector _fileCollector;
 
     /// <summary>
-    /// Стек списков предкомпилированных регулярных выражений
+    /// Стек состоящий из списков предкомпилированных регулярных выражений
     /// для исключения файлов и директорий.
     /// </summary>
-    private Stack<List<Regex>> _excludePatternsStack = new();
+    readonly Stack<List<Regex>> _excludePatternsStack = new();
 
-    internal DirectoryTraverser(FilesMapCollector fileMapCollector,
-        FileCollector fileCollector)
+    internal DirectoryWalker(IFileStructureCollector fileMapCollector,
+        ISourceFileCollector fileCollector)
     {
         _fileCollector = fileCollector;
         _fileMapCollector = fileMapCollector;
 
-        // Предварительное исключение папки "obj"
+        // Предварительное исключение папок "obj", ".git" и "bin"
         var initialPatterns = new List<Regex>
         {
             new Regex(@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
@@ -41,9 +42,9 @@ internal class DirectoryTraverser
     /// </summary>
     /// <param name="rootPath">Путь к корневой директории,
     /// с которой начинается сбор файлов.</param>
-    internal void TraverseDirectory(DirectoryInfo rootPath)
+    public void WalkDirectory(DirectoryInfo rootPath)
     {
-        ProcessDirectory(rootPath, TabSimbol.ToString());
+        ProcessDirectory(rootPath, TabSymbol.ToString());
     }
 
     /// <summary>
@@ -64,7 +65,7 @@ internal class DirectoryTraverser
 
             _fileMapCollector.AddDirectory(directory, currentTabs);
 
-            ProcessDirectory(directory, currentTabs + TabSimbol);
+            ProcessDirectory(directory, currentTabs + TabSymbol);
         }
 
         // Обработка файлов в текущей директории
@@ -73,7 +74,7 @@ internal class DirectoryTraverser
             _fileMapCollector.AddFile(file, currentTabs);
 
             if (!IsExcluded(file.Name, false))
-                _fileCollector.Add(file);
+                _fileCollector.AddFileSource(file);
         }
 
         // Удаляем паттерны текущей директории из стека
@@ -108,6 +109,56 @@ internal class DirectoryTraverser
     private void CheckGitIngnore(DirectoryInfo currentDirectory)
     {
         var gitIngnoreFile = currentDirectory.GetFiles(".gitignore").FirstOrDefault();
-        _excludePatternsStack.Push(gitIngnoreFile.ParseGitignoreFile());
+        _excludePatternsStack.Push(ParseGitignoreFile(gitIngnoreFile));
+    }
+
+    /// <summary>
+    /// Читает файл .gitignore и возвращает список предкомпилированных регулярных выражений.
+    /// </summary>
+    /// <param name="gitIgnoreFile">Информация о файле .gitignore.</param>
+    /// <returns>Список регулярных выражений для игнорирования.</returns>
+    private List<Regex> ParseGitignoreFile(FileInfo? gitIgnoreFile)
+    {
+        if (gitIgnoreFile == null || !gitIgnoreFile.Exists)
+            return new();
+
+        var patterns = new List<Regex>();
+        var lines = File.ReadAllLines(gitIgnoreFile.FullName);
+
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+
+            if (string.IsNullOrEmpty(trimmedLine))
+                continue;
+
+            // Игнорирование комментариев
+            if (trimmedLine.StartsWith("#"))
+                continue;
+
+            // Игнорирование отрицательных паттернов (начинающихся с '!')
+            if (trimmedLine.StartsWith("!"))
+                continue;
+
+            // Обработка паттернов директорий
+            bool isDirectoryPattern = trimmedLine.EndsWith("/");
+
+            string pattern = trimmedLine.TrimEnd('/');
+
+            // Конвертируем паттерн в регулярное выражение
+            string regexPattern = "^" + Regex.Escape(pattern)
+                                        .Replace("\\*", ".*")
+                                        .Replace("\\?", ".") + "$";
+
+            var options = RegexOptions.Compiled | RegexOptions.IgnoreCase;
+
+            // Если это паттерн для директории, добавляем проверку на конец строки
+            if (isDirectoryPattern)
+                regexPattern += @"(\\|/)?$";
+
+            patterns.Add(new Regex(regexPattern, options));
+        }
+
+        return patterns;
     }
 }
