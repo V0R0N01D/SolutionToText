@@ -1,26 +1,22 @@
-﻿using System.Buffers;
-
-namespace SolutionToText.Services;
+﻿namespace SolutionToText.Services;
 
 /// <summary>
-/// Класс для обработки файлов решения, объединяющий их содержимое в один файл на рабочем столе.
+/// Processes solution files and combines their contents into a single output file.
 /// </summary>
 class SolutionProcessor
 {
     /// <summary>
-    /// Обрабатывает все файлы с нужными расширениями в указанной директории и её подпапках,
-    /// применяет фильтрацию на основе .gitignore и объединяет их содержимое 
-    /// в один текстовый файл 'result.txt' на рабочем столе пользователя.
+    /// Combines filtered solution files into single output file
     /// </summary>
-    /// <param name="rootPath">Путь к корневой директории решения.</param>
-    /// <returns>Путь к созданному объединенному файлу.</returns>
+    /// <param name="rootPath">Solution root directory.</param>
+    /// <returns>Path to the generated output file.</returns>
     internal string Process(DirectoryInfo rootPath)
     {
         var filesStruct = new FileStructureCollector();
-        var filesCollector = new SourceFileCollector([".cs", ".js", ".css"]);
+        var filesCollector = new SourceFileCollector([".cs", ".js", ".css", ".cshtml", ".cshtml.cs"]);
 
-        var directoryTraverser = new DirectoryWalker(filesStruct, filesCollector);
-        directoryTraverser.WalkDirectory(rootPath);
+        var directoryWalker = new DirectoryWalker(filesStruct, filesCollector);
+        directoryWalker.WalkDirectory(rootPath);
 
         var destinationFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Desktop),

@@ -2,34 +2,43 @@
 
 namespace SolutionToText.Services;
 
-class ContentWriter : IContentWriter, IDisposable
+/// <summary>
+/// Provides methods for writing file structure and file contents to an output file.
+/// </summary>
+internal sealed class ContentWriter : IContentWriter, IDisposable
 {
     private readonly StreamWriter _writer;
     private bool _disposed = false;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentWriter"/> class with the specified output file path.
+    /// </summary>
+    /// <param name="filePath">The path to the output file.</param>
     internal ContentWriter(string filePath)
     {
         _writer = new StreamWriter(filePath);
     }
 
+    /// <inheritdoc />
     public void WriteFilesStructure(IFileStructureCollector filesStructureCollector)
     {
         _writer.WriteLine(filesStructureCollector.GetFilesStructure());
     }
 
+    /// <inheritdoc />
     public void WriteFileContent(FileInfo file, char[] buffer, string rootPath)
     {
-        _writer.WriteLine($"Содержимое файла {file.FullName.Replace(rootPath, string.Empty)}:");
+        _writer.WriteLine($"File content {file.FullName.Replace(rootPath, string.Empty)}:");
         CopyFileContent(buffer, file);
         _writer.WriteLine(_writer.NewLine);
     }
 
     /// <summary>
-    /// Копирует содержимое исходного файла в поток назначения, 
-    /// используя переданный буфер для чтения данных порциями.
+    /// Copies the content of the source file to the destination stream,
+    /// using the provided buffer.
     /// </summary>
-    /// <param name="buffer">Буфер, используемый для копирования.</param>
-    /// <param name="sourceFile">Путь к исходному файлу.</param>
+    /// <param name="buffer">The buffer used for copying.</param>
+    /// <param name="sourceFile">Source file information</param>
     private void CopyFileContent(
         char[] buffer,
         FileInfo sourceFile)
@@ -51,15 +60,15 @@ class ContentWriter : IContentWriter, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!_disposed && disposing)
             _writer.Dispose();
+
+        _disposed = true;
     }
 
     ~ContentWriter() => Dispose(false);
 
     #endregion
 }
-
-

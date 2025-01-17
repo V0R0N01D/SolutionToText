@@ -4,7 +4,7 @@ using SolutionToText.Interfaces;
 namespace SolutionToText.Services;
 
 /// <summary>
-/// Класс который используется, чтобы создать карту файлов в проекте.
+/// Collects and maintains project file structure information
 /// </summary>
 class FileStructureCollector : IFileStructureCollector
 {

@@ -3,13 +3,13 @@
 namespace SolutionToText.Services;
 
 /// <summary>
-/// Класс, рекурсивно собирающий файлы с указанными расширениями из директорий и их поддиректорий,
-/// применяя фильтрацию на основе файлов .gitignore.
+/// A class that recursively collects files with specified extensions from directories 
+/// and their subdirectories, applying filtering based on .gitignore files.
 /// </summary>
 class SourceFileCollector : ISourceFileCollector
 {
     /// <summary>
-    /// Набор расширений файлов, которые необходимо включить в результат.
+    /// A set of file extensions that need to be included in the result.
     /// </summary>
     private readonly HashSet<string> _includeExtensions;
 
@@ -22,7 +22,6 @@ class SourceFileCollector : ISourceFileCollector
 
     public void AddFileSource(FileInfo file)
     {
-        // фильтрация по расширению
         if (!_includeExtensions.Contains(file.Extension))
             return;
 

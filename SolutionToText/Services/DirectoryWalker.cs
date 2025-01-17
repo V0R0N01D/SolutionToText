@@ -4,9 +4,9 @@ using SolutionToText.Interfaces;
 namespace SolutionToText.Services;
 
 /// <summary>
-/// Класс который рекурсивно проходится по директориям и передает данные в другие классы.
+/// A class that recursively walking directories and passes data to other classes.
 /// </summary>
-class DirectoryWalker : IDirectoryWalker
+internal sealed class DirectoryWalker : IDirectoryWalker
 {
     private const char TabSymbol = '-';
 
@@ -14,50 +14,47 @@ class DirectoryWalker : IDirectoryWalker
     private readonly ISourceFileCollector _fileCollector;
 
     /// <summary>
-    /// Стек состоящий из списков предкомпилированных регулярных выражений
-    /// для исключения файлов и директорий.
+    /// Stack of precompiled regex patterns for file/directory exclusion.
     /// </summary>
-    readonly Stack<List<Regex>> _excludePatternsStack = new();
+    private readonly Stack<List<Regex>> _excludePatternsStack = new();
 
     internal DirectoryWalker(IFileStructureCollector fileMapCollector,
         ISourceFileCollector fileCollector)
     {
         _fileCollector = fileCollector;
         _fileMapCollector = fileMapCollector;
-
-        // Предварительное исключение папок "obj", ".git" и "bin"
+        
         var initialPatterns = new List<Regex>
         {
             new Regex(@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new Regex(@"^.git$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase)
+            new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new Regex(@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
         };
         _excludePatternsStack.Push(initialPatterns);
     }
 
     /// <summary>
-    /// Собирает файлы с расширениями из <see cref="_includeExtensions"/>, 
-    /// начиная с указанной директории и её подпапок,
-    /// применяя фильтрацию на основе шаблонов исключений из файлов .gitignore.
+    /// Processes directory tree starting from root path,
+    /// collecting files matching specified extensions.
     /// </summary>
-    /// <param name="rootPath">Путь к корневой директории,
-    /// с которой начинается сбор файлов.</param>
+    /// <param name="rootPath">Root directory to start processing from.</param>
     public void WalkDirectory(DirectoryInfo rootPath)
     {
         ProcessDirectory(rootPath, TabSymbol.ToString());
     }
 
     /// <summary>
-    /// Рекурсивно проходится по файлам
-    /// из текущей директории и её поддиректорий,
-    /// применяя текущие шаблоны исключений для фильтрации.
+    /// Recursively walking files
+    /// from the current directory and its subdirectories,
+    /// applying current exclusion patterns for filtering.
     /// </summary>
-    /// <param name="currentDirectory">Текущая директория.</param>
+    /// <param name="currentDirectory">The current directory.</param>
     private void ProcessDirectory(DirectoryInfo currentDirectory, string currentTabs)
     {
-        CheckGitIngnore(currentDirectory);
+        CheckGitIgnore(currentDirectory);
 
-        // Обработка поддиректорий
+        // Process subdirectories.
         foreach (var directory in currentDirectory.GetDirectories())
         {
             if (IsExcluded(directory.Name, true))
@@ -68,7 +65,7 @@ class DirectoryWalker : IDirectoryWalker
             ProcessDirectory(directory, currentTabs + TabSymbol);
         }
 
-        // Обработка файлов в текущей директории
+        // Process files in the current directory.
         foreach (var file in currentDirectory.GetFiles())
         {
             _fileMapCollector.AddFile(file, currentTabs);
@@ -77,17 +74,17 @@ class DirectoryWalker : IDirectoryWalker
                 _fileCollector.AddFileSource(file);
         }
 
-        // Удаляем паттерны текущей директории из стека
+        // Remove the current directory's patterns from the stack.
         _excludePatternsStack.Pop();
     }
 
     /// <summary>
-    /// Определяет, должен ли файл или директория быть исключены
-    /// на основе текущего стека шаблонов исключений.
+    /// Determines whether a file or directory should be excluded
+    /// based on the current stack of exclusion patterns.
     /// </summary>
-    /// <param name="name">Название файла или директории.</param>
-    /// <param name="isDirectory">Указывает, является ли объект директорией.</param>
-    /// <returns>True, если файл или директория должны быть исключены, иначе False.</returns>
+    /// <param name="name">The name of the file or directory.</param>
+    /// <param name="isDirectory">Indicates whether the object is a directory.</param>
+    /// <returns>True if the file or directory should be excluded, otherwise False.</returns>
     private bool IsExcluded(string name, bool isDirectory)
     {
         foreach (var patterns in _excludePatternsStack)
@@ -103,20 +100,21 @@ class DirectoryWalker : IDirectoryWalker
     }
 
     /// <summary>
-    /// Проверка существования .gitingore и добавление его правил в исключения.
+    /// Checks for the existence of .gitignore and adds its rules to the exclusions.
     /// </summary>
-    /// <param name="currentDirectory">Директория в которой проверяется наличие файла.</param>
-    private void CheckGitIngnore(DirectoryInfo currentDirectory)
+    /// <param name="currentDirectory">The directory in which the file's
+    /// presence is checked.</param>
+    private void CheckGitIgnore(DirectoryInfo currentDirectory)
     {
-        var gitIngnoreFile = currentDirectory.GetFiles(".gitignore").FirstOrDefault();
-        _excludePatternsStack.Push(ParseGitignoreFile(gitIngnoreFile));
+        var gitIgnoreFile = currentDirectory.GetFiles(".gitignore").FirstOrDefault();
+        _excludePatternsStack.Push(ParseGitignoreFile(gitIgnoreFile));
     }
 
     /// <summary>
-    /// Читает файл .gitignore и возвращает список предкомпилированных регулярных выражений.
+    /// Reads the .gitignore file and returns a list of precompiled regular expressions.
     /// </summary>
-    /// <param name="gitIgnoreFile">Информация о файле .gitignore.</param>
-    /// <returns>Список регулярных выражений для игнорирования.</returns>
+    /// <param name="gitIgnoreFile">Information about the .gitignore file.</param>
+    /// <returns>A list of regular expressions for ignoring.</returns>
     private List<Regex> ParseGitignoreFile(FileInfo? gitIgnoreFile)
     {
         if (gitIgnoreFile == null || !gitIgnoreFile.Exists)
@@ -132,20 +130,19 @@ class DirectoryWalker : IDirectoryWalker
             if (string.IsNullOrEmpty(trimmedLine))
                 continue;
 
-            // Игнорирование комментариев
+            // Ignore comment.
             if (trimmedLine.StartsWith("#"))
                 continue;
 
-            // Игнорирование отрицательных паттернов (начинающихся с '!')
+            // Ignore negative pattern.
             if (trimmedLine.StartsWith("!"))
                 continue;
-
-            // Обработка паттернов директорий
-            bool isDirectoryPattern = trimmedLine.EndsWith("/");
+            
+            var isDirectoryPattern = trimmedLine.EndsWith("/");
 
             string pattern = trimmedLine.TrimEnd('/');
 
-            // Конвертируем паттерн в регулярное выражение
+            // Convert pattern in regular expression.
             string regexPattern = "^" + Regex.Escape(pattern)
                                         .Replace("\\*", ".*")
                                         .Replace("\\?", ".") + "$";
