@@ -8,8 +8,6 @@ namespace SolutionToText.Services;
 /// </summary>
 internal sealed class DirectoryWalker : IDirectoryWalker
 {
-    private const char TabSymbol = '-';
-
     private readonly IFileStructureCollector _fileMapCollector;
     private readonly ISourceFileCollector _fileCollector;
 
@@ -29,7 +27,9 @@ internal sealed class DirectoryWalker : IDirectoryWalker
             new Regex(@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new Regex(@"^.git$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new Regex(@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),            new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new Regex(@"^.idea$", RegexOptions.Compiled | RegexOptions.IgnoreCase),            new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new Regex(@"^.vs$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
         };
         _excludePatternsStack.Push(initialPatterns);
     }
@@ -41,7 +41,7 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     /// <param name="rootPath">Root directory to start processing from.</param>
     public void WalkDirectory(DirectoryInfo rootPath)
     {
-        ProcessDirectory(rootPath, TabSymbol.ToString());
+        ProcessDirectory(rootPath, 1);
     }
 
     /// <summary>
@@ -50,7 +50,8 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     /// applying current exclusion patterns for filtering.
     /// </summary>
     /// <param name="currentDirectory">The current directory.</param>
-    private void ProcessDirectory(DirectoryInfo currentDirectory, string currentTabs)
+    /// <param name="depth">The current depth level.</param>
+    private void ProcessDirectory(DirectoryInfo currentDirectory, int depth)
     {
         CheckGitIgnore(currentDirectory);
 
@@ -60,15 +61,15 @@ internal sealed class DirectoryWalker : IDirectoryWalker
             if (IsExcluded(directory.Name, true))
                 continue;
 
-            _fileMapCollector.AddDirectory(directory, currentTabs);
+            _fileMapCollector.AddDirectory(directory, depth);
 
-            ProcessDirectory(directory, currentTabs + TabSymbol);
+            ProcessDirectory(directory, depth + 1);
         }
 
         // Process files in the current directory.
         foreach (var file in currentDirectory.GetFiles())
         {
-            _fileMapCollector.AddFile(file, currentTabs);
+            _fileMapCollector.AddFile(file, depth);
 
             if (!IsExcluded(file.Name, false))
                 _fileCollector.AddFileSource(file);

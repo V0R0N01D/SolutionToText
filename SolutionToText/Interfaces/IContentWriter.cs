@@ -16,7 +16,6 @@ internal interface IContentWriter
     /// Writes the content of a specific file to the output destination.
     /// </summary>
     /// <param name="file">The file information to write.</param>
-    /// <param name="buffer">The buffer used for reading file content.</param>
     /// <param name="rootPath">The root path of the solution.</param>
-    void WriteFileContent(FileInfo file, char[] buffer, string rootPath);
+    void WriteFileContent(FileInfo file, string rootPath);
 }

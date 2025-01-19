@@ -8,17 +8,18 @@ namespace SolutionToText.Services;
 /// </summary>
 class FileStructureCollector : IFileStructureCollector
 {
+    private const char TabSymbol = '-';
     private readonly StringBuilder _filesStructure = new();
 
-    public void AddFile(FileInfo file, string currentTab)
+    public void AddFile(FileInfo file, int depth)
     {
-        _filesStructure.AppendLine($"{currentTab} {file.Name}");
+        _filesStructure.AppendLine($"{new string(TabSymbol, depth)} {file.Name}");
     }
 
-    public void AddDirectory(DirectoryInfo directory, string currentTab)
+    public void AddDirectory(DirectoryInfo directory, int depth)
     {
-        _filesStructure.AppendLine($"{currentTab} {directory.Name}");
+        _filesStructure.AppendLine($"{new string(TabSymbol, depth)} {directory.Name}");
     }
-
+    
     public string GetFilesStructure() => _filesStructure.ToString();
 }

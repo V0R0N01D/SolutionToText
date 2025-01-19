@@ -8,10 +8,12 @@ namespace SolutionToText.Services;
 internal sealed class ContentWriter : IContentWriter, IDisposable
 {
     private readonly StreamWriter _writer;
+    private readonly char[] _buffer = new char[2048];
     private bool _disposed = false;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ContentWriter"/> class with the specified output file path.
+    /// Initializes a new instance of the <see cref="ContentWriter"/> class
+    /// with the specified output file path.
     /// </summary>
     /// <param name="filePath">The path to the output file.</param>
     internal ContentWriter(string filePath)
@@ -26,10 +28,10 @@ internal sealed class ContentWriter : IContentWriter, IDisposable
     }
 
     /// <inheritdoc />
-    public void WriteFileContent(FileInfo file, char[] buffer, string rootPath)
+    public void WriteFileContent(FileInfo file, string rootPath)
     {
         _writer.WriteLine($"File content {file.FullName.Replace(rootPath, string.Empty)}:");
-        CopyFileContent(buffer, file);
+        CopyFileContent(file);
         _writer.WriteLine(_writer.NewLine);
     }
 
@@ -37,18 +39,15 @@ internal sealed class ContentWriter : IContentWriter, IDisposable
     /// Copies the content of the source file to the destination stream,
     /// using the provided buffer.
     /// </summary>
-    /// <param name="buffer">The buffer used for copying.</param>
-    /// <param name="sourceFile">Source file information</param>
-    private void CopyFileContent(
-        char[] buffer,
-        FileInfo sourceFile)
+    /// <param name="sourceFile">Source file information.</param>
+    private void CopyFileContent(FileInfo sourceFile)
     {
         using var reader = sourceFile.OpenText();
 
         var charsRead = 0;
-        while ((charsRead = reader.Read(buffer, 0, buffer.Length)) > 0)
+        while ((charsRead = reader.Read(_buffer, 0, _buffer.Length)) > 0)
         {
-            _writer.Write(buffer, 0, charsRead);
+            _writer.Write(_buffer, 0, charsRead);
         }
     }
 
