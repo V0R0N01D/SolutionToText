@@ -10,6 +10,7 @@ internal sealed class DirectoryWalker : IDirectoryWalker
 {
     private readonly IFileStructureCollector _fileMapCollector;
     private readonly ISourceFileCollector _fileCollector;
+    private readonly IGitIgnoreParser _gitIgnoreParser;
 
     /// <summary>
     /// Stack of precompiled regex patterns for file/directory exclusion.
@@ -17,18 +18,20 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     private readonly Stack<List<Regex>> _excludePatternsStack = new();
 
     internal DirectoryWalker(IFileStructureCollector fileMapCollector,
-        ISourceFileCollector fileCollector)
+        ISourceFileCollector fileCollector,
+        IGitIgnoreParser gitIgnoreParser)
     {
         _fileCollector = fileCollector;
         _fileMapCollector = fileMapCollector;
+        _gitIgnoreParser = gitIgnoreParser;
         
         var initialPatterns = new List<Regex>
         {
             new Regex(@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new Regex(@"^.git$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),            new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^.idea$", RegexOptions.Compiled | RegexOptions.IgnoreCase),            new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new Regex(@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new Regex(@"^.idea$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new Regex(@"^.vs$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
         };
         _excludePatternsStack.Push(initialPatterns);
@@ -53,7 +56,7 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     /// <param name="depth">The current depth level.</param>
     private void ProcessDirectory(DirectoryInfo currentDirectory, int depth)
     {
-        CheckGitIgnore(currentDirectory);
+        TryAddGitIgnore(currentDirectory);
 
         // Process subdirectories.
         foreach (var directory in currentDirectory.GetDirectories())
@@ -105,58 +108,10 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     /// </summary>
     /// <param name="currentDirectory">The directory in which the file's
     /// presence is checked.</param>
-    private void CheckGitIgnore(DirectoryInfo currentDirectory)
+    private void TryAddGitIgnore(DirectoryInfo currentDirectory)
     {
         var gitIgnoreFile = currentDirectory.GetFiles(".gitignore").FirstOrDefault();
-        _excludePatternsStack.Push(ParseGitignoreFile(gitIgnoreFile));
-    }
-
-    /// <summary>
-    /// Reads the .gitignore file and returns a list of precompiled regular expressions.
-    /// </summary>
-    /// <param name="gitIgnoreFile">Information about the .gitignore file.</param>
-    /// <returns>A list of regular expressions for ignoring.</returns>
-    private List<Regex> ParseGitignoreFile(FileInfo? gitIgnoreFile)
-    {
-        if (gitIgnoreFile == null || !gitIgnoreFile.Exists)
-            return new();
-
-        var patterns = new List<Regex>();
-        var lines = File.ReadAllLines(gitIgnoreFile.FullName);
-
-        foreach (var line in lines)
-        {
-            var trimmedLine = line.Trim();
-
-            if (string.IsNullOrEmpty(trimmedLine))
-                continue;
-
-            // Ignore comment.
-            if (trimmedLine.StartsWith("#"))
-                continue;
-
-            // Ignore negative pattern.
-            if (trimmedLine.StartsWith("!"))
-                continue;
-            
-            var isDirectoryPattern = trimmedLine.EndsWith("/");
-
-            string pattern = trimmedLine.TrimEnd('/');
-
-            // Convert pattern in regular expression.
-            string regexPattern = "^" + Regex.Escape(pattern)
-                                        .Replace("\\*", ".*")
-                                        .Replace("\\?", ".") + "$";
-
-            var options = RegexOptions.Compiled | RegexOptions.IgnoreCase;
-
-            // Если это паттерн для директории, добавляем проверку на конец строки
-            if (isDirectoryPattern)
-                regexPattern += @"(\\|/)?$";
-
-            patterns.Add(new Regex(regexPattern, options));
-        }
-
-        return patterns;
+        var ignoreRules = _gitIgnoreParser.ParseGitignoreFile(gitIgnoreFile);
+        _excludePatternsStack.Push(ignoreRules);
     }
 }

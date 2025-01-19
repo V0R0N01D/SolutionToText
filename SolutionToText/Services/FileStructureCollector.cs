@@ -6,7 +6,7 @@ namespace SolutionToText.Services;
 /// <summary>
 /// Collects and maintains project file structure information
 /// </summary>
-class FileStructureCollector : IFileStructureCollector
+internal sealed class FileStructureCollector : IFileStructureCollector
 {
     private const char TabSymbol = '-';
     private readonly StringBuilder _filesStructure = new();
