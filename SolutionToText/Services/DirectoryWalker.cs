@@ -4,7 +4,7 @@ using SolutionToText.Interfaces;
 namespace SolutionToText.Services;
 
 /// <summary>
-/// A class that recursively walking directories and passes data to other classes.
+/// Provides methods for recursive directory walking.
 /// </summary>
 internal sealed class DirectoryWalker : IDirectoryWalker
 {
@@ -12,9 +12,6 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     private readonly ISourceFileCollector _fileCollector;
     private readonly IGitIgnoreParser _gitIgnoreParser;
 
-    /// <summary>
-    /// Stack of precompiled regex patterns for file/directory exclusion.
-    /// </summary>
     private readonly Stack<List<Regex>> _excludePatternsStack = new();
 
     internal DirectoryWalker(IFileStructureCollector fileMapCollector,
@@ -27,12 +24,12 @@ internal sealed class DirectoryWalker : IDirectoryWalker
         
         var initialPatterns = new List<Regex>
         {
-            new Regex(@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^.git$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^.idea$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new Regex(@"^.vs$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new (@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new (@"^.git$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new (@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new (@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new (@"^.idea$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new (@"^.vs$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
         };
         _excludePatternsStack.Push(initialPatterns);
     }

@@ -1,12 +1,13 @@
 ﻿namespace SolutionToText.Services;
 
 /// <summary>
-/// Processes solution files and combines their contents into a single output file.
+/// Provides method for processes solution files
+/// and combines their contents into a single output file.
 /// </summary>
 internal sealed class SolutionProcessor
 {
     /// <summary>
-    /// Combines filtered solution files into single output file
+    /// Combines filtered solution files into single output file.
     /// </summary>
     /// <param name="rootPath">Solution root directory.</param>
     /// <returns>Path to the generated output file.</returns>

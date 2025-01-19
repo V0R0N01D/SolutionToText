@@ -3,8 +3,7 @@
 namespace SolutionToText.Services;
 
 /// <summary>
-/// A class that recursively collects files with specified extensions from directories 
-/// and their subdirectories, applying filtering based on .gitignore files.
+/// Provides methods for collecting files and returning them as a list.
 /// </summary>
 internal sealed class SourceFileCollector : ISourceFileCollector
 {
@@ -16,6 +15,7 @@ internal sealed class SourceFileCollector : ISourceFileCollector
         _includeExtensions = includeExtensions.ToHashSet();
     }
 
+    /// <inheritdoc />
     public void AddFileSource(FileInfo file)
     {
         if (!_includeExtensions.Contains(file.Extension))
@@ -24,5 +24,6 @@ internal sealed class SourceFileCollector : ISourceFileCollector
         _files.Add(file);
     }
 
+    /// <inheritdoc />
     public List<FileInfo> GetSourceFiles() => _files;
 }
