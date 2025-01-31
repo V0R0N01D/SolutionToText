@@ -1,4 +1,6 @@
-﻿namespace SolutionToText.Services;
+﻿using SolutionToText.Interfaces;
+
+namespace SolutionToText.Services;
 
 /// <summary>
 /// Provides method for processes solution files
@@ -6,34 +8,40 @@
 /// </summary>
 internal sealed class SolutionProcessor
 {
-    /// <summary>
-    /// Combines filtered solution files into single output file.
-    /// </summary>
-    /// <param name="rootPath">Solution root directory.</param>
-    /// <returns>Path to the generated output file.</returns>
-    internal string Process(DirectoryInfo rootPath)
+    private readonly IPathService _pathService;
+    private readonly IFileStructureCollector _fileStructureCollector;
+    private readonly ISourceFileCollector _sourceFileCollector;
+    private readonly IGitIgnoreParser _gitIgnoreParser;
+
+    public SolutionProcessor(
+        IPathService pathService,
+        IFileStructureCollector fileStructureCollector,
+        ISourceFileCollector sourceFileCollector,
+        IGitIgnoreParser gitIgnoreParser)
     {
-        var filesStruct = new FileStructureCollector();
-        var filesCollector =
-            new SourceFileCollector([".cs", ".js", ".css", ".cshtml", ".cshtml.cs"]);
-        var gitIgnoreParser = new GitIgnoreParser();
+        _pathService = pathService;
+        _fileStructureCollector = fileStructureCollector;
+        _sourceFileCollector = sourceFileCollector;
+        _gitIgnoreParser = gitIgnoreParser;
+    }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="destinationFilePath">The path to the file that needs to be created.</param>
+    internal void ConvertSolutionToText(string destinationFilePath)
+    {
+        var rootDirectory = _pathService.GetRootDirectory();
 
-        var directoryWalker = new DirectoryWalker(filesStruct, filesCollector, gitIgnoreParser);
-        directoryWalker.WalkDirectory(rootPath);
-
-        var destinationFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            "result.txt");
+        var directoryWalker = new DirectoryWalker(_fileStructureCollector, _sourceFileCollector, _gitIgnoreParser);
+        directoryWalker.WalkDirectory(rootDirectory);
 
         using var fileWriter = new ContentWriter(destinationFilePath);
+        fileWriter.WriteFilesStructure(_fileStructureCollector);
 
-        fileWriter.WriteFilesStructure(filesStruct);
-
-        foreach (var file in filesCollector.GetSourceFiles())
+        foreach (var file in _sourceFileCollector.GetSourceFiles())
         {
-            fileWriter.WriteFileContent(file, rootPath.FullName);
+            fileWriter.WriteFileContent(file, rootDirectory.FullName);
         }
-
-        return destinationFilePath;
     }
 }

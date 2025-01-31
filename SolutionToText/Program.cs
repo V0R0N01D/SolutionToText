@@ -6,26 +6,23 @@ class Program
 {
     static void Main(string[] args)
     {
+        var pathValidator = new PathValidator();
+        var pathService = new ConsolePathService(pathValidator);
+        var fileStructureCollector = new FileStructureCollector();
+        var sourceFileCollector =
+            new SourceFileCollector([".cs", ".js", ".css", ".cshtml", ".cshtml.cs"]);
+        var gitIgnoreParser = new GitIgnoreParser();
+        
+        var destinationFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            "result.txt");
+
+        var solutionProcessor =
+            new SolutionProcessor(pathService, fileStructureCollector, sourceFileCollector, gitIgnoreParser);
+        
         try
         {
-            Console.WriteLine("Enter the path to the solution folder:");
-            var rootPath = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(rootPath))
-            {
-                Console.WriteLine("Empty field provided.");
-                return;
-            }
-
-            var directoryInfo = new DirectoryInfo(rootPath);
-            if (!directoryInfo.Exists)
-            {
-                Console.WriteLine("The specified folder does not exist.");
-                return;
-            }
-
-            var solutionProcessor = new SolutionProcessor();
-            var destinationFilePath = solutionProcessor.Process(directoryInfo);
+            solutionProcessor.ConvertSolutionToText(destinationFilePath);
 
             Console.WriteLine($"Processing completed. Combined file created: {destinationFilePath}.");
 
