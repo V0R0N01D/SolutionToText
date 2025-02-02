@@ -12,26 +12,18 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     private readonly ISourceFileCollector _fileCollector;
     private readonly IGitIgnoreParser _gitIgnoreParser;
 
-    private readonly Stack<List<Regex>> _excludePatternsStack = new();
+    private readonly Stack<IEnumerable<Regex>> _excludePatternsStack = new();
 
     internal DirectoryWalker(IFileStructureCollector fileMapCollector,
         ISourceFileCollector fileCollector,
-        IGitIgnoreParser gitIgnoreParser)
+        IGitIgnoreParser gitIgnoreParser,
+        IEnumerable<Regex> initialExcludePatterns)
     {
         _fileCollector = fileCollector;
         _fileMapCollector = fileMapCollector;
         _gitIgnoreParser = gitIgnoreParser;
         
-        var initialPatterns = new List<Regex>
-        {
-            new (@"^obj$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new (@"^.git$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new (@"^bin$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new (@"^wwwroot$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new (@"^.idea$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            new (@"^.vs$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-        };
-        _excludePatternsStack.Push(initialPatterns);
+        _excludePatternsStack.Push(initialExcludePatterns);
     }
 
     /// <summary>
@@ -58,7 +50,7 @@ internal sealed class DirectoryWalker : IDirectoryWalker
         // Process subdirectories.
         foreach (var directory in currentDirectory.GetDirectories())
         {
-            if (IsExcluded(directory.Name, true))
+            if (IsExcluded(directory.Name))
                 continue;
 
             _fileMapCollector.AddDirectory(directory, depth);
@@ -71,7 +63,7 @@ internal sealed class DirectoryWalker : IDirectoryWalker
         {
             _fileMapCollector.AddFile(file, depth);
 
-            if (!IsExcluded(file.Name, false))
+            if (!IsExcluded($"{file.Name}.{file.Extension}"))
                 _fileCollector.AddFileSource(file);
         }
 
@@ -84,9 +76,8 @@ internal sealed class DirectoryWalker : IDirectoryWalker
     /// based on the current stack of exclusion patterns.
     /// </summary>
     /// <param name="name">The name of the file or directory.</param>
-    /// <param name="isDirectory">Indicates whether the object is a directory.</param>
     /// <returns>True if the file or directory should be excluded, otherwise False.</returns>
-    private bool IsExcluded(string name, bool isDirectory)
+    private bool IsExcluded(string name)
     {
         foreach (var patterns in _excludePatternsStack)
         {

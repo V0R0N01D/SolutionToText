@@ -1,4 +1,7 @@
-﻿using SolutionToText.Services;
+﻿using System.Text.RegularExpressions;
+using Microsoft.Extensions.Configuration;
+using SolutionToText.Models;
+using SolutionToText.Services;
 
 namespace SolutionToText;
 
@@ -6,22 +9,37 @@ class Program
 {
     static void Main(string[] args)
     {
-        var pathValidator = new PathValidator();
-        var pathService = new ConsolePathService(pathValidator);
-        var fileStructureCollector = new FileStructureCollector();
-        var sourceFileCollector =
-            new SourceFileCollector([".cs", ".js", ".css", ".cshtml", ".cshtml.cs"]);
-        var gitIgnoreParser = new GitIgnoreParser();
-        
-        var destinationFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            "result.txt");
-
-        var solutionProcessor =
-            new SolutionProcessor(pathService, fileStructureCollector, sourceFileCollector, gitIgnoreParser);
-        
         try
         {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+                .Build();
+
+            var configurations = configuration.GetSection("Configurations")
+                .Get<IEnumerable<Configuration>>();
+            var currentConfiguration = configurations!.First();
+
+            var pathValidator = new PathValidator();
+            var pathService = new ConsolePathService(pathValidator);
+            var fileStructureCollector = new FileStructureCollector();
+            var sourceFileCollector =
+                new SourceFileCollector(currentConfiguration.IncludeFileExtensions);
+            var gitIgnoreParser = new GitIgnoreParser();
+
+            var destinationFilePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                "result.txt");
+
+            var solutionProcessor =
+                new SolutionProcessor(pathService, fileStructureCollector,
+                    sourceFileCollector, gitIgnoreParser,
+                    currentConfiguration.ExcludePatterns
+                        .Select(pattern =>
+                            new Regex($"^{pattern}$",
+                                RegexOptions.Compiled | RegexOptions.IgnoreCase))
+                        .ToArray());
+
             solutionProcessor.ConvertSolutionToText(destinationFilePath);
 
             Console.WriteLine($"Processing completed. Combined file created: {destinationFilePath}.");

@@ -1,4 +1,5 @@
-﻿using SolutionToText.Interfaces;
+﻿using System.Text.RegularExpressions;
+using SolutionToText.Interfaces;
 
 namespace SolutionToText.Services;
 
@@ -12,19 +13,22 @@ internal sealed class SolutionProcessor
     private readonly IFileStructureCollector _fileStructureCollector;
     private readonly ISourceFileCollector _sourceFileCollector;
     private readonly IGitIgnoreParser _gitIgnoreParser;
+    private readonly IEnumerable<Regex> _initialExcludePatterns;
 
     public SolutionProcessor(
         IPathService pathService,
         IFileStructureCollector fileStructureCollector,
         ISourceFileCollector sourceFileCollector,
-        IGitIgnoreParser gitIgnoreParser)
+        IGitIgnoreParser gitIgnoreParser,
+        IEnumerable<Regex> initialExcludePatterns)
     {
         _pathService = pathService;
         _fileStructureCollector = fileStructureCollector;
         _sourceFileCollector = sourceFileCollector;
         _gitIgnoreParser = gitIgnoreParser;
+        _initialExcludePatterns = initialExcludePatterns;
     }
-    
+
     /// <summary>
     /// 
     /// </summary>
@@ -33,7 +37,8 @@ internal sealed class SolutionProcessor
     {
         var rootDirectory = _pathService.GetRootDirectory();
 
-        var directoryWalker = new DirectoryWalker(_fileStructureCollector, _sourceFileCollector, _gitIgnoreParser);
+        var directoryWalker = new DirectoryWalker(_fileStructureCollector, _sourceFileCollector,
+            _gitIgnoreParser, _initialExcludePatterns);
         directoryWalker.WalkDirectory(rootDirectory);
 
         using var fileWriter = new ContentWriter(destinationFilePath);
