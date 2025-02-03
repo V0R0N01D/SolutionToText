@@ -1,4 +1,4 @@
-namespace SolutionToText.Models;
+namespace SolutionToText.Models.Configurations;
 
 public class Configuration
 {

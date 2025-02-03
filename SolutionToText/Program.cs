@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using SolutionToText.Models;
+using SolutionToText.Models.Configurations;
 using SolutionToText.Services;
 
 namespace SolutionToText;
@@ -16,9 +17,14 @@ class Program
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
                 .Build();
 
+            var settings = configuration.GetSection("Settings").Get<Settings>();
+
             var configurations = configuration.GetSection("Configurations")
-                .Get<IEnumerable<Configuration>>();
-            var currentConfiguration = configurations!.First();
+                .Get<Configuration[]>();
+            var currentConfiguration = configurations!.FirstOrDefault(conf =>
+                conf.Title == settings!.SelectedConfigurationTitle);
+            if (currentConfiguration == null)
+                throw new ArgumentNullException("currentConfiguration");
 
             var pathValidator = new PathValidator();
             var pathService = new ConsolePathService(pathValidator);
@@ -54,9 +60,13 @@ class Program
         {
             Console.WriteLine("Error: Configuration file (appsettings.json) not found.");
         }
-        catch (ArgumentNullException)
+        catch (ArgumentNullException ex)
         {
-            Console.WriteLine("Error: Configuration file is corrupted or has an invalid format.");
+            var message = ex.ParamName == "currentConfiguration"
+                ? "Selected configuration title is invalid."
+                : "Configuration file is corrupted or has an invalid format.";
+
+            Console.WriteLine($"Error: {message}");
         }
         catch (Exception ex)
         {
