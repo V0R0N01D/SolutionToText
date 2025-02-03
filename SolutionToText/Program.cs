@@ -50,11 +50,20 @@ class Program
                 UseShellExecute = true
             });
         }
+        catch (FileNotFoundException)
+        {
+            Console.WriteLine("Error: Configuration file (appsettings.json) not found.");
+        }
+        catch (ArgumentNullException)
+        {
+            Console.WriteLine("Error: Configuration file is corrupted or has an invalid format.");
+        }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred: {ex.Message}");
+            Console.WriteLine($"An unexpected error occurred while processing the solution: {ex.Message}");
         }
 
-        Console.ReadLine();
+        Console.WriteLine("Press any key to exit...");
+        Console.ReadKey();
     }
 }
