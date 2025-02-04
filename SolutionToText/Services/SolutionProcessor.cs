@@ -30,9 +30,10 @@ internal sealed class SolutionProcessor
     }
 
     /// <summary>
-    /// 
+    /// Processes the solution by walking through the directory structure, collecting file structure and source files,
+    /// and writes the combined content to a single output file at the specified destination.
     /// </summary>
-    /// <param name="destinationFilePath">The path to the file that needs to be created.</param>
+    /// <param name="destinationFilePath">The full path where the output file will be created.</param>
     internal void ConvertSolutionToText(string destinationFilePath)
     {
         var rootDirectory = _pathService.GetRootDirectory();

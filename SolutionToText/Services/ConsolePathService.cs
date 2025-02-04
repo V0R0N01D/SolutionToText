@@ -27,7 +27,7 @@ internal sealed class ConsolePathService : IPathService
             if (validateResult.IsSuccess)
                 return validateResult.Value!;
             
-            HandleError(validateResult.Message!);
+            HandleError(validateResult.ErrorMessage!);
         }
     }
 

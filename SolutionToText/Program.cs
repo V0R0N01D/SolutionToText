@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
-using SolutionToText.Models;
 using SolutionToText.Models.Configurations;
 using SolutionToText.Services;
 
