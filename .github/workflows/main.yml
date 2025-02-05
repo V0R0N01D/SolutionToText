@@ -1,0 +1,97 @@
+name: Build and Release .NET Project
+
+on:
+  push:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'SolutionToText/SolutionToText.csproj'
+  ARTIFACT_NAME: 'SolutionToText'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runtime: ['win-x64', 'linux-x64']
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" ${{ env.PROJECT_PATH }})
+          if [ -z "$VERSION" ]; then
+            echo "Version not found in project file"
+            exit 1
+          fi
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Debug Version
+        run: |
+          cat ${{ env.PROJECT_PATH }}
+          echo "Extracted version: ${{ steps.version.outputs.VERSION }}"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache Nuget packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{hashFiles('**/*.csproj')}}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }} -r ${{ matrix.runtime }}
+
+      - name: Publish Application
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+          --no-restore \
+          --self-contained true \
+          -c Release \
+          -p:PublishSingleFile=true \
+          -P:EnableCompressionInSingleFile=true \
+          -p:DebugType=None \
+          -p:DebugSymbols=false \
+          -r ${{ matrix.runtime }} \
+          -o published/${{ matrix.runtime }}
+
+      - name: Create zip archive
+        run: |
+          cd published/${{ matrix.runtime }}
+          zip -r ../${{ env.ARTIFACT_NAME }}-${{ matrix.runtime }}.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-${{ matrix.runtime }}
+          path: published/${{ env.ARTIFACT_NAME }}-${{ matrix.runtime }}.zip
+          retention-days: 5
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: published
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: "Release v${{ needs.build.outputs.version }}"
+          files: published/**/*.zip 
